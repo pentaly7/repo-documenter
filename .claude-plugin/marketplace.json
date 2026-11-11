@@ -1,0 +1,13 @@
+{
+  "name": "repo-documenter",
+  "owner": {
+    "name": "local"
+  },
+  "plugins": [
+    {
+      "name": "repo-documenter",
+      "source": "./",
+      "description": "Document a whole repository in one Markdown guide with Mermaid diagrams, using parallel agents."
+    }
+  ]
+}

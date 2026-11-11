@@ -1,0 +1,14 @@
+{
+  "name": "repo-documenter",
+  "displayName": "Repo Documenter",
+  "version": "0.1.0",
+  "description": "Document a whole repository in one Markdown guide with Mermaid diagrams, for technical and non-technical readers, using parallel scout, tracer and fresh-eyes reviewer agents.",
+  "license": "MIT",
+  "keywords": [
+    "documentation",
+    "mermaid",
+    "architecture",
+    "onboarding",
+    "subagents"
+  ]
+}
