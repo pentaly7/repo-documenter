@@ -7,7 +7,7 @@
     {
       "name": "repo-documenter",
       "source": "./",
-      "description": "Document a whole repository in one Markdown guide with Mermaid diagrams, using parallel agents."
+      "description": "Repository guide plus code-free operator guides (application flow, transaction flow) with Mermaid diagrams, using parallel agents."
     }
   ]
 }

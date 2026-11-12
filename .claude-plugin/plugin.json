@@ -1,8 +1,8 @@
 {
   "name": "repo-documenter",
   "displayName": "Repo Documenter",
-  "version": "0.1.0",
-  "description": "Document a whole repository in one Markdown guide with Mermaid diagrams, for technical and non-technical readers, using parallel scout, tracer and fresh-eyes reviewer agents.",
+  "version": "0.2.0",
+  "description": "Document a whole repository with Mermaid diagrams: a repository guide for technical and non-technical readers plus code-free operator guides for application flow and transaction flow, built by parallel scout, tracer, writer and fresh-eyes reviewer agents.",
   "license": "MIT",
   "keywords": [
     "documentation",

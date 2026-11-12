@@ -1,24 +1,39 @@
 ---
 name: document
-description: Produce one detailed Markdown document that explains a whole code repository to both technical and non-technical readers, with Mermaid diagrams for the high-level picture, the architecture, and every important flow traced step by step through the code. Splits the work across parallel subagents (module scouts, flow tracers, fresh-eyes reviewers) so large repositories are documented quickly. Use this whenever the user asks to document, explain, map, onboard onto, or write up a repository, codebase, service, app or project - for example "document this repo", "explain how this app works", "make an architecture doc", "write onboarding docs", "draw the flow of this service", "make a handover document", "I inherited this code, what does it do" - or gives a GitHub URL or local folder and wants a write-up with diagrams, even if they never say "documentation" or "Mermaid".
+description: Document a whole code repository with Mermaid diagrams - a detailed repository guide for technical and non-technical readers, plus two separate operator guides (application flow and transaction flow) that explain how the app behaves with diagrams and no code references, for operations staff who need answers without asking a developer. Splits the work across parallel subagents (module scouts, flow tracers, fresh-eyes reviewers) so large repositories are documented quickly. Use this whenever the user asks to document, explain, map, onboard onto, or write up a repository, codebase, service, app or project - for example "document this repo", "explain how this app works", "make an architecture doc", "write onboarding docs", "draw the flow of this service", "make a handover document", "I inherited this code, what does it do", "write an operator guide", "explain the transaction flow for ops", "docs for the operations team" - or gives a GitHub URL or local folder and wants a write-up with diagrams, even if they never say "documentation" or "Mermaid".
 ---
 
 # Repo Documenter
 
-Turn a repository into a single Markdown document that a product manager can read
-from the top and an engineer can read to the bottom. The document explains what the
-app is, how it is built, and how each important flow moves through the code, using
-Mermaid diagrams that render on GitHub, GitLab and most Markdown viewers.
+Turn a repository into documentation with Mermaid diagrams that render on GitHub,
+GitLab and most Markdown viewers. One round of code reading produces three files:
+
+| Document | For | Contains |
+|---|---|---|
+| **Repository guide** | Developers, plus anyone who reads only its first sections | What the app is, how it is built, every important flow traced through the code with file references |
+| **Operator guide: application flow** | Operations staff | The running parts, what they connect to, startup and shutdown, the normal operating cycle, background jobs, signs of health, what to check when something is wrong |
+| **Operator guide: transaction flow** | Operations staff | Each kind of transaction step by step, its statuses, timeouts and retries, what goes wrong and what the system does about it |
+
+The operator guides exist so that someone running the system can understand its
+behaviour without asking a developer and without reading code. They contain no
+file paths, function names, line numbers or code. They are separate files, not
+sections of the repository guide, because an operator handed a developer
+document will not find their answers in it.
 
 ## What good looks like
 
-A reader should finish the document able to answer, without opening the code:
+A reader should finish the documents able to answer, without opening the code:
 
 - **Non-technical reader:** What is this? Who uses it? What happens, in order, when
   someone uses it? What other systems does it depend on? What can go wrong?
 - **Technical reader:** Where does execution start? Which module owns which
   responsibility? What is the exact call path of each main flow, with file names?
   What is stored, where, in what shape? How do I run, test, deploy and change it?
+- **Operator:** What is running and what does it talk to? What happens to a
+  transaction at each step, and what will I see when it happens? If the bank,
+  the database or a partner system is down, what does the app do on its own, and
+  what is left for me to check? How do I find out what happened to one
+  transaction?
 
 Three properties matter more than length:
 
@@ -36,8 +51,8 @@ Three properties matter more than length:
 The work follows a lead-and-workers model (the "elephant and goldfish" pattern):
 
 - **You are the lead.** You hold the whole picture: the request, the survey, the
-  plan, the naming, and the final document. You are the only one who writes the
-  final file.
+  plan, the naming, and the final documents. You write the repository guide
+  yourself and place every finished file.
 - **Workers are subagents with a fresh context.** Each gets one narrow job (one
   module, one flow, the data layer, the build and deploy setup), reads the code for
   that job in depth, writes its result to its own file in a scratch folder, and
@@ -63,10 +78,16 @@ Decide these from the request, and only ask when a wrong guess would waste real 
 | Decision | Default when the user did not say |
 |---|---|
 | Which repo | The current working directory, or clone the URL given |
-| Output file | `docs/REPOSITORY_GUIDE.md` in the repo; if the repo is read-only or not the user's, write beside it and hand the file over |
+| Which documents | All three. Produce only the repository guide, or only the operator guides, when the user asks for just that |
+| Output files | `docs/REPOSITORY_GUIDE.md`, `docs/operator/APP_FLOW.md` and `docs/operator/TRANSACTION_FLOW.md` in the repo; if the repo is read-only or not the user's, write beside it and hand the files over |
 | Language of the document | The language the user is writing in |
 | Depth | Whole repo, full template |
 | Focus | None; if the user names an area ("mainly the payment flow"), cover everything briefly and that area in full depth |
+
+"Transaction" means whatever unit of business work this system exists to
+process: a payment, a transfer, an order, a message, a job, an API request. If
+the system has no such unit (a library, an infrastructure repo), skip the
+transaction flow guide and say so.
 
 If a docs file already exists at the output path, read it first and write to a new
 file name rather than overwriting someone's work, unless the user asked to update it.
@@ -201,7 +222,28 @@ In direct mode, read `${CLAUDE_SKILL_DIR}/references/worker-rules.md` and each
 agent file in `${CLAUDE_PLUGIN_ROOT}/agents/` and do those jobs yourself, in
 the same order and to the same output shape.
 
-### Phase 4 - Assemble (lead only)
+### Phase 4 - Assemble (lead and operator writers, at the same time)
+
+**First, start two operator writers** in the same turn, so they work while you
+assemble the repository guide:
+
+```
+mkdir -p <scratch>/operator
+cp "${CLAUDE_SKILL_DIR}/references/operator-docs.md" <scratch>/operator-docs.md
+```
+
+| Agent | Assignment | Writes to |
+|---|---|---|
+| `repo-documenter:operator-writer` | `app-flow` | `<scratch>/operator/APP_FLOW.md` |
+| `repo-documenter:operator-writer` | `transaction-flow` | `<scratch>/operator/TRANSACTION_FLOW.md` |
+
+Give each the scratch folder path, the repository path and its assignment. They
+write from the worker result files, which is why they start only after Phase 3
+has finished. Before starting them, decide which traced flows are transactions
+and which are application lifecycle (startup, shutdown, scheduled jobs,
+reconnects), and say so in the prompt.
+
+**Then assemble the repository guide yourself.**
 
 Read `${CLAUDE_SKILL_DIR}/references/document-template.md` and
 `${CLAUDE_SKILL_DIR}/references/mermaid.md`, then write the final document from
@@ -220,14 +262,24 @@ the result files.
 
 ### Phase 5 - Fresh-eyes review (reviewers in parallel)
 
-Start both reviewers together, giving each only the path to the draft document
-and the repository. Give them none of the worker files, the brief or your
-reasoning: the point is that they see what a real reader will see.
+Start all reviewers together, giving each only the paths named below. Give them
+none of the worker files, the brief or your reasoning: the point is that they
+see what a real reader will see.
 
-- **Accuracy reviewer** checks the document against the code.
-- **Plain reader** reads sections 1-3 as a non-technical person.
+| Reviewer | Given | Checks |
+|---|---|---|
+| `accuracy-reviewer` | Repository guide + repository | The guide against the code |
+| `accuracy-reviewer` (second instance) | Both operator guides + repository | Every behaviour, timeout, retry, status and code the operator guides state, against the code |
+| `plain-reader` | Repository guide | Sections 1-3 as a non-technical person |
+| `operator-reader` | Both operator guides, nothing else | Whether an operator on shift can answer their questions from these alone |
 
-In direct mode with no subagents, do both reviews yourself after a deliberate
+Also run a mechanical check on the operator guides yourself, since "no code
+references" is easy to verify and easy to miss by eye. Search them for source
+file extensions, `path/like/this` strings, `name()` call forms and `:123` line
+suffixes; every hit outside a Mermaid block is either an operator-visible
+identifier (a log line, a URL, a setting) or a leak to remove.
+
+In direct mode with no subagents, do these reviews yourself after a deliberate
 break from the draft: re-open the cited files rather than trusting your memory
 of them.
 
@@ -235,20 +287,22 @@ Meanwhile, check the diagrams yourself: if the Mermaid CLI (`mmdc`) is already
 installed, render each diagram to confirm it parses; otherwise go through the
 rendering rules in `references/mermaid.md` by hand.
 
-Fix every Blocker and Major finding in the document. Where a reviewer and a
+Fix every Blocker and Major finding in all three documents. A wrong fact found
+in one document is usually wrong in the others too, so correct it everywhere. Where a reviewer and a
 worker disagree, open the code. If the reviewers found many factual errors in
 one flow or module, re-run that worker rather than patching sentence by sentence.
 
 ### Phase 6 - Deliver
 
-Write the document to the output path and hand it over with a short note: what
+Write the repository guide and copy the two operator guides from the scratch
+folder to their output paths, then hand them over with a short note: what
 was covered, what was not, how the work was split (so the user knows which parts
 had a second pair of eyes), and anything surprising or risky found on the way.
 Remove the scratch folder unless the user wants the working files.
 
 ## Agents
 
-This plugin ships six agents. Request them by these names:
+This plugin ships eight agents. Request them by these names:
 
 | Agent | Job | One per | Writes to |
 |---|---|---|---|
@@ -258,6 +312,8 @@ This plugin ships six agents. Request them by these names:
 | `repo-documenter:ops-scout` | Stack, configuration, run, test, build, deploy | Repo | `<scratch>/ops.md` |
 | `repo-documenter:accuracy-reviewer` | Fresh-eyes check of the draft against the code | Draft | `<scratch>/reviews/accuracy.md` |
 | `repo-documenter:plain-reader` | Fresh-eyes read of sections 1-3 as a non-technical person | Draft | `<scratch>/reviews/plain-reader.md` |
+| `repo-documenter:operator-writer` | Writes one operator guide from the worker result files, with no code references | Operator guide (two) | `<scratch>/operator/<NAME>.md` |
+| `repo-documenter:operator-reader` | Fresh-eyes read of the operator guides as an operator on shift | Operator guides | `<scratch>/reviews/operator-reader.md` |
 
 ## Working with very large repositories
 
@@ -308,12 +364,18 @@ Before handing over, confirm each line:
 
 - [ ] Every planned worker either returned a result that was used, was retried,
       or is recorded in the document as not covered.
-- [ ] Both fresh-eyes reviews ran (or were done by the lead in direct mode) and
+- [ ] All fresh-eyes reviews ran (or were done by the lead in direct mode) and
       every Blocker and Major finding is fixed.
+- [ ] The operator guides contain no file paths, function or class names, line
+      numbers or code, and the mechanical search confirms it.
+- [ ] Every step in the transaction flow guide says what an operator can
+      observe, or says plainly that nothing is visible at that step.
+- [ ] The operator guides and the repository guide agree on every fact they
+      share (order of steps, timeouts, retry counts, status names).
 - [ ] Sections 1-3 contain no unexplained jargon and stand on their own.
 - [ ] Startup and every chosen main flow is traced with a sequence diagram, a step
       table with file references, and a failure path.
-- [ ] Every file path, function name, command and setting name in the document
+- [ ] Every file path, function name, command and setting name in the repository guide
       exists in the repo as written.
 - [ ] One name per component across all text and diagrams.
 - [ ] Every diagram passes the rendering rules and matches the surrounding text.

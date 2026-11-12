@@ -31,6 +31,14 @@ Table: Step | What happens | Where in the code | Data in → out
 **When things go wrong:** Table: Failure | What the code does | What the caller sees
 **Worth knowing:** non-obvious rules, ordering constraints, timeouts, retries,
 with their values and where they are set.
+**What can be observed from outside:** Table: At step | What appears | Exact text
+or value. Cover log messages the code writes (their literal text and level),
+status values stored, response or result codes returned, messages sent to other
+systems, metrics or audit records. This feeds the operator guides, whose readers
+see these signals and never the code, so copy the literal text from the code
+rather than paraphrasing it. Also name the identifier that follows the
+transaction through every step (a reference number, trace ID, order ID) and
+where it shows up.
 **Unknowns:** hops you could not resolve and where you looked.
 
 If the logic has heavy branching that a sequence diagram hides, add one Mermaid

@@ -22,6 +22,13 @@ one line on what it does and where it is defined.
 ### Build and deployment
 A Mermaid flowchart LR from commit to running system, environments, how a
 release happens, what is automatic and what is manual.
+### Operating it
+What an operator needs and can see without reading code: the processes,
+services or containers that run and their names; start and stop order and how
+"ready" is recognised; health check endpoints or commands; where logs go and
+their format; scheduled jobs with their schedule and what each does; ports and
+connections to outside systems; settings that change behaviour at run time and
+the effect of each; alerts or monitoring hooks defined in the repo.
 ### Tests
 Kinds of tests, where they live, how much of the system they exercise.
 ### Risks and oddities
