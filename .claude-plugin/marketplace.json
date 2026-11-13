@@ -1,0 +1,14 @@
+{
+  "name": "repo-documenter",
+  "description": "Repository documentation plugin: developer and app-user guides with Mermaid diagrams.",
+  "owner": {
+    "name": "pentaly"
+  },
+  "plugins": [
+    {
+      "name": "repo-documenter",
+      "source": "./",
+      "description": "Document a repository as a developer guide and an app-user guide, with Mermaid diagrams, reviewed by fresh-context agents."
+    }
+  ]
+}
