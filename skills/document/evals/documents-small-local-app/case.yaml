@@ -1,0 +1,11 @@
+schema_version: "1.1"
+name: documents-small-local-app
+context:
+  scaffold_script: place-files.sh
+expected_outcome: |
+  Two guides are written under docs/: DEVELOPER_GUIDE.md and USER_GUIDE.md.
+  The developer guide explains the architecture (one Node HTTP server, a JSON file
+  store, a static page), names real files, and has Mermaid sequence diagrams for the
+  add, complete and delete flows. The user guide explains the same app in plain
+  language with flowcharts and without file or function names. Fresh reviewer
+  subagents reviewed the guides before the final message.

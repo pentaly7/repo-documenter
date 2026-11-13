@@ -1,79 +1,119 @@
-# Repo Documenter
+# repo-documenter
 
-A Claude Code plugin that documents a whole repository with Mermaid diagrams. One
-run produces three Markdown files:
+A Claude Code plugin that documents a repository as two Markdown guides with Mermaid diagrams:
 
 | File | For | Contains |
-|---|---|---|
-| `docs/REPOSITORY_GUIDE.md` | Developers, and anyone reading only its first sections | Big picture, architecture, every important flow traced through the code with file references, data model, configuration, run and deploy |
-| `docs/operator/APP_FLOW.md` | Operations staff | The running parts, connections, startup and shutdown, the normal operating cycle, scheduled jobs, signs of health, what to check when something looks wrong |
-| `docs/operator/TRANSACTION_FLOW.md` | Operations staff | Each transaction type step by step, statuses, timeouts and retries, failure situations, result codes |
+|------|-----|----------|
+| `DEVELOPER_GUIDE.md` | Engineers | Architecture, repository map, setup, data model, application lifecycle, detailed code-level flows, modules, configuration, integrations, deployment, change recipes, known gaps |
+| `USER_GUIDE.md` | The people who use the app | What it does, the app at a glance, the full flow from start to finish, step-by-step tasks, what happens behind the scenes, statuses, troubleshooting, in plain language with no code references |
 
-The two operator guides contain no file paths, function names, line numbers or
-code. They keep what an operator can actually see: log messages, statuses, codes,
-service names and setting names.
+## Use
 
-To be fast on large repositories it splits the work across parallel subagents: a
-lead surveys and plans, workers each read one part in depth, and two reviewers who
-have seen none of the work check the result.
+```text
+/repo-documenter:document
+/repo-documenter:document https://github.com/owner/repo
+/repo-documenter:document ./services/billing  (write the guides to ./handover)
+```
+
+It also triggers on requests such as "document this repo" or "explain how this app works".
+
+The guides go to `docs/` in a local repository, or to `<repo-name>-docs/` in the current folder for a repository cloned from a URL. The skill writes documentation only: it does not change source code, commit, install dependencies or run the app.
 
 ## Install
 
-From a local copy of this folder:
+Try it without installing:
 
 ```sh
 claude plugin marketplace add pentaly7/repo-documenter
 claude plugin install repo-documenter@repo-documenter
 ```
 
-Or try it for one session without installing:
-
 ```sh
 claude --plugin-dir ./repo-documenter
 ```
 
-If you push this folder to a Git repository, teammates can add it with
-`claude plugin marketplace add <owner>/<repo>`.
+Requires Claude Code with subagents, and Python 3 for the checker script.
 
-## Use
+## How it works
 
-Open the repository you want documented and run:
-
-```text
-/repo-documenter:document
+```mermaid
+flowchart TD
+    intake([0 Intake: target, output folder]) --> survey[1 Survey the repository]
+    survey --> plan[2 Plan: modules, flows, scouts]
+    plan --> evidence["3 Evidence: scouts return cited fact sheets"]
+    evidence --> dev[4 Draft DEVELOPER_GUIDE.md]
+    dev --> user[5 Draft USER_GUIDE.md]
+    user --> check[6 Run check_guides.py]
+    check --> review{{7 Goldfish review: three fresh reviewers}}
+    review --> triage[Elephant verifies each finding and fixes]
+    triage --> clean{Clean round, or 3 rounds done?}
+    clean -->|No| check
+    clean -->|Yes| deliver([8 Deliver both guides and open items])
 ```
 
-Or just ask, for example "document this repo" or "explain how this service works
-with diagrams". Optional directions work in plain words: "focus on the payment
-flow", "write it in Indonesian", "only the operator guides", "only the repository
-guide", "save them under docs/handover/".
+1. The main agent (the Elephant) surveys the repository, plans which modules and flows to cover, and gathers evidence, using read-only scout subagents in parallel when the repository is large.
+2. It drafts the developer guide from cited fact sheets, then derives the user guide from the same evidence.
+3. A script checks Mermaid syntax, the minimum set of diagrams, paths, links and placeholders.
+4. Three reviewers with a fresh context (the Goldfish) review the guides. The Elephant verifies each finding against the code, fixes what is confirmed, and repeats until a round is clean or three rounds have run.
 
-Small repositories are documented directly; larger ones use the agents below. If
-a plan needs more than about 12 agents, it asks before starting.
+## Where the design comes from
 
-## What is inside
+### Elephant-Goldfish Model ([google/elephant-goldfish-model](https://github.com/google/elephant-goldfish-model))
 
-| Path | What it is |
-|---|---|
-| `skills/document/SKILL.md` | The lead's workflow: survey, plan, dispatch, assemble, review, deliver |
-| `skills/document/references/` | Repository guide template, operator guide rules and templates, Mermaid rules, rules shared by all workers |
-| `agents/module-scout.md` | Reads one code area in depth |
-| `agents/flow-tracer.md` | Traces one flow end to end, with a sequence diagram |
-| `agents/data-scout.md` | Data model, lifecycles, data movement |
-| `agents/ops-scout.md` | Configuration, run, test, build, deploy |
-| `agents/accuracy-reviewer.md` | Checks the finished guide against the code |
-| `agents/plain-reader.md` | Reads the non-technical sections as a non-technical person |
-| `agents/operator-writer.md` | Writes one operator guide from the workers' findings, without code references |
-| `agents/operator-reader.md` | Reads the operator guides as an operator on shift and reports what they could not answer |
+| EGM idea | In this plugin |
+|----------|----------------|
+| Elephant holds context and drafts | The main agent surveys, keeps fact sheets, drafts both guides and resolves findings |
+| Goldfish review with a fresh context | `goldfish-accuracy`, `goldfish-new-developer`, `goldfish-app-user`: new read-only subagents that get only file paths, never the conversation |
+| Reviewer persona plus a written standard | `agents/*.md` are the personas; `references/*-standard.md` are the rubrics, with Blocker / Major / Nit severities |
+| Read-only scouts that cite `file:symbol` and never infer from names | `scout` returns fact sheets in which every entry has a citation |
+| A reviewer that fails did not review | Retried once, then recorded as "not run"; never counted as zero findings |
+| Settled findings, clean rounds, a cap | Review protocol: stop at a clean round or after 3 rounds |
+| A same-context review is not a Goldfish review | Without subagents the guides are delivered as "Not reviewed" |
+| Safety gate before a large fan-out | More than 8 scouts needs the user's approval |
+| Documentation-only scope, artifacts in files | Only the two guides are written; nothing long is pasted into chat |
+| The human owns the outcome | Contested findings and unanswerable questions go to the user as open items |
 
-## Notes
+### Prompt Engineering Guide ([dair-ai/Prompt-Engineering-Guide](https://github.com/dair-ai/Prompt-Engineering-Guide))
 
-- Workers write only to a temporary scratch folder; the only files added to your
-  repository are the three documents.
-- Secret values are never copied into the documents, only setting names.
-- Optional: if the Mermaid CLI (`mmdc`) is installed, diagrams are render-checked.
-- The lead-and-fresh-reviewers design follows the Elephant-Goldfish Model
-  (https://github.com/google/elephant-goldfish-model).
+| Technique | In this plugin |
+|-----------|----------------|
+| Prompt chaining and task decomposition | Nine stages; each writes a file the next one reads |
+| Orchestrator and sub-agents with clean contexts | Elephant orchestrates scouts and reviewers |
+| The four prompt elements (instruction, context, input, output indicator) | Every subagent task template names the mode, the paths, and the exact output format |
+| Structured outputs and delimiters | Fixed fact-sheet, flow-trace and finding formats |
+| Be specific; say what to do | Standards list required sections and diagrams; rules are stated positively, with the reason |
+| External memory | `repo-map.md`, fact sheets and `review-log.md` in a work directory |
+| Verification | Mechanical checker plus the Goldfish review |
+| Error handling in the context | Retry once, record the failure, continue, tell the user |
+| Avoid over-constraint | Rules explain why, so the agent can adapt them to unusual repositories |
+| Guard against prompt injection | Repository text is treated as data, not instructions |
 
-## Disclaimer
-this repository build using fable 5.2 medium (https://claude.ai/share/111a0c2e-5d86-44f4-909f-84f91fe65c2c)
+## Files
+
+```text
+repo-documenter/
+├── .claude-plugin/plugin.json
+├── agents/
+│   ├── scout.md                    read-only explorer (module or flow mode)
+│   ├── goldfish-accuracy.md        guides versus code
+│   ├── goldfish-new-developer.md   newcomer read, then a navigation test
+│   └── goldfish-app-user.md        non-technical read, no code access
+└── skills/document/
+    ├── SKILL.md                    the workflow
+    ├── references/
+    │   ├── fact-sheet-format.md
+    │   ├── developer-guide-standard.md
+    │   ├── user-guide-standard.md
+    │   ├── mermaid-rules.md
+    │   └── review-protocol.md
+    ├── scripts/check_guides.py     mechanical checks (run with --self-test to test it)
+    └── evals/                      two test cases for `claude plugin eval`
+```
+
+## Test
+
+```sh
+python3 skills/document/scripts/check_guides.py --self-test
+claude plugin validate .
+cd skills/document && claude plugin eval . --scaffold --allow-tools Write,Edit,Bash,Agent
+```

@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Office to-do list</title>
+</head>
+<body>
+  <h1>Office to-do list</h1>
+  <form id="new">
+    <label for="title">New item</label>
+    <input id="title" maxlength="120" placeholder="What needs doing?">
+    <button type="submit">Add</button>
+  </form>
+  <p id="message" role="alert"></p>
+  <ul id="list"></ul>
+  <script>
+    const list = document.getElementById("list");
+    const message = document.getElementById("message");
+
+    async function refresh() {
+      const todos = await (await fetch("/api/todos")).json();
+      list.innerHTML = "";
+      if (!todos.length) list.innerHTML = "<li>Nothing to do. Nice.</li>";
+      for (const todo of todos) {
+        const li = document.createElement("li");
+        const box = document.createElement("input");
+        box.type = "checkbox";
+        box.checked = todo.done;
+        box.setAttribute("aria-label", "Done: " + todo.title);
+        box.onchange = () => call("PATCH", "/api/todos/" + todo.id);
+        const del = document.createElement("button");
+        del.textContent = "Remove";
+        del.onclick = () => call("DELETE", "/api/todos/" + todo.id);
+        const text = document.createElement(todo.done ? "s" : "span");
+        text.textContent = todo.title;
+        li.append(box, " ", text, " ", del);
+        list.append(li);
+      }
+    }
+
+    async function call(method, url, body) {
+      const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: body && JSON.stringify(body) });
+      message.textContent = res.ok ? "" : (await res.json()).error;
+      refresh();
+    }
+
+    document.getElementById("new").onsubmit = (event) => {
+      event.preventDefault();
+      const input = document.getElementById("title");
+      call("POST", "/api/todos", { title: input.value });
+      input.value = "";
+    };
+
+    refresh();
+  </script>
+</body>
+</html>

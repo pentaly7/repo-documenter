@@ -1,0 +1,10 @@
+schema_version: "1.1"
+name: documents-repo-from-github-url
+expected_outcome: |
+  The repository is cloned and documented as two guides, DEVELOPER_GUIDE.md and
+  USER_GUIDE.md, in a Prompt-Engineering-Guide-docs folder. The developer guide
+  identifies a Next.js site built with the Nextra docs theme, explains the pages
+  folder with one .mdx file per language and the _meta JSON files that order the
+  navigation, and treats the translated pages as a repeated pattern instead of
+  listing every file. The user guide treats readers and content contributors as the
+  users. Both have Mermaid diagrams. Fresh reviewer subagents reviewed the guides.

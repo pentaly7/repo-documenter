@@ -1,0 +1,11 @@
+{
+  "name": "office-todo",
+  "version": "0.3.1",
+  "description": "Shared to-do list for the office",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test"
+  },
+  "engines": { "node": ">=18" }
+}

@@ -1,14 +1,10 @@
 {
   "name": "repo-documenter",
-  "displayName": "Repo Documenter",
-  "version": "0.2.0",
-  "description": "Document a whole repository with Mermaid diagrams: a repository guide for technical and non-technical readers plus code-free operator guides for application flow and transaction flow, built by parallel scout, tracer, writer and fresh-eyes reviewer agents.",
+  "version": "1.0.0",
+  "description": "Document a repository as two Markdown guides with Mermaid diagrams: one for developers and one for the people who use the app. An Elephant agent drafts with full context; fresh-context Goldfish reviewers check the guides against the code.",
+  "author": {
+    "name": "pentaly"
+  },
   "license": "MIT",
-  "keywords": [
-    "documentation",
-    "mermaid",
-    "architecture",
-    "onboarding",
-    "subagents"
-  ]
+  "keywords": ["documentation", "mermaid", "onboarding", "architecture", "user-guide", "elephant-goldfish"]
 }
